@@ -1,0 +1,26 @@
+name: kamalshare
+description: KamalShare - Wireless File Transfer by Kamal
+publish_to: 'none'
+version: 2.0.0+1
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  mobile_scanner: ^5.0.0
+  shelf: ^1.4.1
+  shelf_router: ^1.1.4
+  network_info_plus: ^4.1.0
+  file_picker: ^6.1.1
+  path_provider: ^2.1.2
+  qr_flutter: ^4.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
