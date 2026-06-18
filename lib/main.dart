@@ -4,7 +4,6 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart' as shelf_router;
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'dart:io';
@@ -68,8 +67,7 @@ class _SplashScreenState extends State<SplashScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 100,
-                height: 100,
+                width: 100, height: 100,
                 decoration: BoxDecoration(
                   color: Color(0xFFE8FF47),
                   borderRadius: BorderRadius.circular(28),
@@ -95,18 +93,21 @@ class _SplashScreenState extends State<SplashScreen>
               SizedBox(height: 8),
               Text('Phone to Phone File Transfer',
                   style: TextStyle(
-                      color: Colors.white38, fontSize: 14, letterSpacing: 1)),
+                      color: Colors.white38,
+                      fontSize: 14,
+                      letterSpacing: 1)),
               SizedBox(height: 60),
               SizedBox(
-                width: 24,
-                height: 24,
+                width: 24, height: 24,
                 child: CircularProgressIndicator(
                     color: Color(0xFFE8FF47), strokeWidth: 2),
               ),
               SizedBox(height: 16),
               Text('Built by Kamal',
                   style: TextStyle(
-                      color: Colors.white24, fontSize: 12, letterSpacing: 3)),
+                      color: Colors.white24,
+                      fontSize: 12,
+                      letterSpacing: 3)),
             ],
           ),
         ),
@@ -142,23 +143,25 @@ class HomeScreen extends StatelessWidget {
                           fontWeight: FontWeight.bold)),
                   Spacer(),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: Color(0xFF161616),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: Colors.white12),
                     ),
-                    child: Text('v2.0',
-                        style: TextStyle(color: Colors.white38, fontSize: 12)),
+                    child: Text('v2.1',
+                        style: TextStyle(
+                            color: Colors.white38, fontSize: 12)),
                   ),
                 ],
               ),
               SizedBox(height: 6),
               Text('No internet · No laptop · Just phones',
-                  style: TextStyle(color: Colors.white38, fontSize: 13)),
+                  style:
+                      TextStyle(color: Colors.white38, fontSize: 13)),
               SizedBox(height: 48),
 
-              // Send button
               _bigButton(
                 context: context,
                 icon: Icons.upload_rounded,
@@ -167,12 +170,11 @@ class HomeScreen extends StatelessWidget {
                 sublabel: 'Turn on hotspot and share',
                 color: Color(0xFFE8FF47),
                 textColor: Colors.black,
-                onTap: () => Navigator.push(
-                    context, MaterialPageRoute(builder: (_) => SenderScreen())),
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => SenderScreen())),
               ),
               SizedBox(height: 16),
 
-              // Receive button
               _bigButton(
                 context: context,
                 icon: Icons.download_rounded,
@@ -183,7 +185,8 @@ class HomeScreen extends StatelessWidget {
                 textColor: Colors.white,
                 borderColor: Colors.white12,
                 onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => ReceiverScreen())),
+                    MaterialPageRoute(
+                        builder: (_) => ReceiverScreen())),
               ),
 
               Spacer(),
@@ -204,10 +207,13 @@ class HomeScreen extends StatelessWidget {
                             fontSize: 13,
                             fontWeight: FontWeight.w600)),
                     SizedBox(height: 10),
-                    _howRow('1', 'Sender taps Send File and turns on hotspot'),
-                    _howRow('2', 'Receiver connects phone to sender hotspot'),
-                    _howRow('3', 'Receiver taps Receive and scans QR code'),
-                    _howRow('4', 'Select file and transfer instantly!'),
+                    _howRow('1',
+                        'Sender taps Send File and turns on hotspot'),
+                    _howRow('2',
+                        'Receiver connects phone to sender hotspot'),
+                    _howRow(
+                        '3', 'Receiver taps Receive and scans QR code'),
+                    _howRow('4', 'File saves straight to Downloads!'),
                   ],
                 ),
               ),
@@ -216,7 +222,9 @@ class HomeScreen extends StatelessWidget {
                 child: Text(
                   'KAMALSHARE  ◆  ECE PROJECT  ◆  BUILT BY KAMAL',
                   style: TextStyle(
-                      color: Colors.white24, fontSize: 10, letterSpacing: 1.5),
+                      color: Colors.white24,
+                      fontSize: 10,
+                      letterSpacing: 1.5),
                 ),
               ),
               SizedBox(height: 8),
@@ -234,8 +242,7 @@ class HomeScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 20,
-            height: 20,
+            width: 20, height: 20,
             decoration: BoxDecoration(
               color: Color(0xFFE8FF47).withOpacity(0.15),
               borderRadius: BorderRadius.circular(6),
@@ -251,7 +258,8 @@ class HomeScreen extends StatelessWidget {
           SizedBox(width: 10),
           Expanded(
             child: Text(text,
-                style: TextStyle(color: Colors.white54, fontSize: 12)),
+                style: TextStyle(
+                    color: Colors.white54, fontSize: 12)),
           ),
         ],
       ),
@@ -277,13 +285,14 @@ class HomeScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(20),
-          border: borderColor != null ? Border.all(color: borderColor) : null,
+          border: borderColor != null
+              ? Border.all(color: borderColor)
+              : null,
         ),
         child: Row(
           children: [
             Container(
-              width: 50,
-              height: 50,
+              width: 50, height: 50,
               decoration: BoxDecoration(
                 color: textColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(14),
@@ -302,7 +311,8 @@ class HomeScreen extends StatelessWidget {
                 SizedBox(height: 3),
                 Text(sublabel,
                     style: TextStyle(
-                        color: textColor.withOpacity(0.5), fontSize: 12)),
+                        color: textColor.withOpacity(0.5),
+                        fontSize: 12)),
               ],
             ),
             Spacer(),
@@ -359,7 +369,8 @@ class _SenderScreenState extends State<SenderScreen> {
           _selectedFileBytes!,
           headers: {
             'Content-Type': 'application/octet-stream',
-            'Content-Disposition': 'attachment; filename="$_selectedFileName"',
+            'Content-Disposition':
+                'attachment; filename="$_selectedFileName"',
             'Content-Length': '${_selectedFileBytes!.length}',
           },
         );
@@ -385,7 +396,8 @@ class _SenderScreenState extends State<SenderScreen> {
           .addMiddleware(shelf.logRequests())
           .addHandler(router.call);
 
-      _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, _port);
+      _server = await shelf_io.serve(
+          handler, InternetAddress.anyIPv4, _port);
     } catch (e) {
       setState(() => _loading = false);
     }
@@ -460,12 +472,13 @@ body{background:#0D0D0D;color:#F0F0F0;font-family:sans-serif;min-height:100vh;di
             style: TextStyle(color: Colors.white, fontSize: 16)),
       ),
       body: _loading
-          ? Center(child: CircularProgressIndicator(color: Color(0xFFE8FF47)))
+          ? Center(
+              child: CircularProgressIndicator(
+                  color: Color(0xFFE8FF47)))
           : SingleChildScrollView(
               padding: EdgeInsets.all(24),
               child: Column(
                 children: [
-                  // Status pill
                   Container(
                     width: double.infinity,
                     padding: EdgeInsets.all(14),
@@ -477,8 +490,7 @@ body{background:#0D0D0D;color:#F0F0F0;font-family:sans-serif;min-height:100vh;di
                     child: Row(
                       children: [
                         Container(
-                          width: 8,
-                          height: 8,
+                          width: 8, height: 8,
                           decoration: BoxDecoration(
                             color: Color(0xFF47FFB2),
                             shape: BoxShape.circle,
@@ -487,14 +499,12 @@ body{background:#0D0D0D;color:#F0F0F0;font-family:sans-serif;min-height:100vh;di
                         SizedBox(width: 10),
                         Text('Server active on $_ip:$_port',
                             style: TextStyle(
-                                color: Color(0xFF47FFB2), fontSize: 12)),
+                                color: Color(0xFF47FFB2),
+                                fontSize: 12)),
                       ],
                     ),
                   ),
-
                   SizedBox(height: 16),
-
-                  // Instructions
                   Container(
                     width: double.infinity,
                     padding: EdgeInsets.all(14),
@@ -506,13 +516,12 @@ body{background:#0D0D0D;color:#F0F0F0;font-family:sans-serif;min-height:100vh;di
                     child: Text(
                       '1. Turn ON your mobile hotspot\n2. Tell receiver to connect to your hotspot\n3. Select file below\n4. Show QR code to receiver to scan',
                       style: TextStyle(
-                          color: Colors.white54, fontSize: 12, height: 1.8),
+                          color: Colors.white54,
+                          fontSize: 12,
+                          height: 1.8),
                     ),
                   ),
-
                   SizedBox(height: 20),
-
-                  // Pick file
                   GestureDetector(
                     onTap: _pickFile,
                     child: Container(
@@ -543,7 +552,8 @@ body{background:#0D0D0D;color:#F0F0F0;font-family:sans-serif;min-height:100vh;di
                           SizedBox(width: 14),
                           Expanded(
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   _fileSelected
@@ -561,20 +571,19 @@ body{background:#0D0D0D;color:#F0F0F0;font-family:sans-serif;min-height:100vh;di
                                   Text(
                                     '${(_selectedFileBytes!.length / 1024).toStringAsFixed(1)} KB',
                                     style: TextStyle(
-                                        color: Colors.white38, fontSize: 12),
+                                        color: Colors.white38,
+                                        fontSize: 12),
                                   ),
                               ],
                             ),
                           ),
-                          Icon(Icons.chevron_right, color: Colors.white24),
+                          Icon(Icons.chevron_right,
+                              color: Colors.white24),
                         ],
                       ),
                     ),
                   ),
-
                   SizedBox(height: 20),
-
-                  // QR Code — ALWAYS SHOWS
                   Container(
                     width: double.infinity,
                     padding: EdgeInsets.all(24),
@@ -611,8 +620,8 @@ body{background:#0D0D0D;color:#F0F0F0;font-family:sans-serif;min-height:100vh;di
                         ),
                         SizedBox(height: 12),
                         Container(
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
                             color: Color(0xFF1E1E1E),
                             borderRadius: BorderRadius.circular(8),
@@ -630,13 +639,13 @@ body{background:#0D0D0D;color:#F0F0F0;font-family:sans-serif;min-height:100vh;di
                           Text(
                             '✓ File downloaded $_downloadCount time(s)',
                             style: TextStyle(
-                                color: Color(0xFF47FFB2), fontSize: 13),
+                                color: Color(0xFF47FFB2),
+                                fontSize: 13),
                           ),
                         ],
                       ],
                     ),
                   ),
-
                   SizedBox(height: 32),
                 ],
               ),
@@ -684,8 +693,10 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
               child: Text(
                 'Connect your Wi-Fi to sender\'s hotspot first, then scan their QR code',
                 textAlign: TextAlign.center,
-                style:
-                    TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
+                style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 13,
+                    height: 1.5),
               ),
             ),
           ),
@@ -694,7 +705,8 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
             margin: EdgeInsets.symmetric(horizontal: 40),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Color(0xFFE8FF47), width: 2),
+              border:
+                  Border.all(color: Color(0xFFE8FF47), width: 2),
             ),
             clipBehavior: Clip.hardEdge,
             child: AspectRatio(
@@ -709,7 +721,8 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => DownloadScreen(url: url)),
+                            builder: (_) =>
+                                DownloadScreen(url: url)),
                       );
                     }
                   }
@@ -720,7 +733,9 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
           SizedBox(height: 24),
           Text('Scanning automatically...',
               style: TextStyle(
-                  color: Color(0xFF47FFB2), fontSize: 13, letterSpacing: 1)),
+                  color: Color(0xFF47FFB2),
+                  fontSize: 13,
+                  letterSpacing: 1)),
         ],
       ),
     );
@@ -748,6 +763,7 @@ class _DownloadScreenState extends State<DownloadScreen> {
   bool _downloading = false;
   bool _done = false;
   double _progress = 0;
+  String _savedPath = '';
 
   @override
   void initState() {
@@ -758,7 +774,8 @@ class _DownloadScreenState extends State<DownloadScreen> {
   Future<void> _getFileInfo() async {
     try {
       final client = HttpClient();
-      final req = await client.getUrl(Uri.parse('${widget.url}/info'));
+      final req =
+          await client.getUrl(Uri.parse('${widget.url}/info'));
       final res = await req.close();
       final body = await res.transform(utf8.decoder).join();
       final data = jsonDecode(body);
@@ -769,10 +786,14 @@ class _DownloadScreenState extends State<DownloadScreen> {
             : 'Sender has not selected a file yet';
       });
     } catch (e) {
-      setState(() => _status = 'Connection failed. Check Wi-Fi hotspot.');
+      setState(() =>
+          _status = 'Connection failed. Check Wi-Fi hotspot.');
     }
   }
 
+  // Saves directly to the phone's public Downloads folder
+  // so it shows up in the Files app and Recent files,
+  // instead of hiding inside the app's private storage.
   Future<void> _downloadFile() async {
     setState(() {
       _downloading = true;
@@ -781,7 +802,8 @@ class _DownloadScreenState extends State<DownloadScreen> {
     });
     try {
       final client = HttpClient();
-      final req = await client.getUrl(Uri.parse('${widget.url}/file'));
+      final req =
+          await client.getUrl(Uri.parse('${widget.url}/file'));
       final res = await req.close();
       final total = res.contentLength;
       int received = 0;
@@ -793,13 +815,20 @@ class _DownloadScreenState extends State<DownloadScreen> {
           setState(() => _progress = received / total);
         }
       }
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/$_fileName');
+
+      // Public Downloads folder — visible in Files app on every Android phone
+      final downloadDir = Directory('/storage/emulated/0/Download');
+      if (!await downloadDir.exists()) {
+        await downloadDir.create(recursive: true);
+      }
+      final file = File('${downloadDir.path}/$_fileName');
       await file.writeAsBytes(bytes);
+
       setState(() {
         _done = true;
         _progress = 1;
-        _status = 'Downloaded! Saved to app folder.';
+        _savedPath = file.path;
+        _status = 'Saved to Downloads folder!';
       });
     } catch (e) {
       setState(() {
@@ -829,18 +858,24 @@ class _DownloadScreenState extends State<DownloadScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 80,
-              height: 80,
+              width: 80, height: 80,
               decoration: BoxDecoration(
-                color: _done ? Color(0xFF1A2A1A) : Color(0xFF161616),
+                color: _done
+                    ? Color(0xFF1A2A1A)
+                    : Color(0xFF161616),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: _done ? Color(0xFF47FFB2) : Colors.white12,
+                  color: _done
+                      ? Color(0xFF47FFB2)
+                      : Colors.white12,
                 ),
               ),
               child: Icon(
-                _done ? Icons.check_circle : Icons.download_rounded,
-                color: _done ? Color(0xFF47FFB2) : Colors.white54,
+                _done
+                    ? Icons.check_circle
+                    : Icons.download_rounded,
+                color:
+                    _done ? Color(0xFF47FFB2) : Colors.white54,
                 size: 40,
               ),
             ),
@@ -855,9 +890,18 @@ class _DownloadScreenState extends State<DownloadScreen> {
             SizedBox(height: 12),
             Text(_status,
                 style: TextStyle(
-                    color: _done ? Color(0xFF47FFB2) : Colors.white54,
+                    color: _done
+                        ? Color(0xFF47FFB2)
+                        : Colors.white54,
                     fontSize: 14),
                 textAlign: TextAlign.center),
+            if (_done) ...[
+              SizedBox(height: 8),
+              Text('Files app → Download → $_fileName',
+                  style: TextStyle(
+                      color: Colors.white38, fontSize: 11),
+                  textAlign: TextAlign.center),
+            ],
             SizedBox(height: 24),
             if (_downloading || _done) ...[
               ClipRRect(
@@ -865,14 +909,16 @@ class _DownloadScreenState extends State<DownloadScreen> {
                 child: LinearProgressIndicator(
                   value: _progress,
                   backgroundColor: Color(0xFF1E1E1E),
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE8FF47)),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(0xFFE8FF47)),
                   minHeight: 6,
                 ),
               ),
               SizedBox(height: 8),
               Text(
                 '${(_progress * 100).toStringAsFixed(0)}%',
-                style: TextStyle(color: Color(0xFFE8FF47), fontSize: 13),
+                style: TextStyle(
+                    color: Color(0xFFE8FF47), fontSize: 13),
               ),
               SizedBox(height: 24),
             ],
@@ -903,8 +949,8 @@ class _DownloadScreenState extends State<DownloadScreen> {
               ),
             if (_done)
               GestureDetector(
-                onTap: () =>
-                    Navigator.popUntil(context, (route) => route.isFirst),
+                onTap: () => Navigator.popUntil(
+                    context, (route) => route.isFirst),
                 child: Container(
                   width: double.infinity,
                   padding: EdgeInsets.all(20),
@@ -925,7 +971,8 @@ class _DownloadScreenState extends State<DownloadScreen> {
             if (!_done)
               TextButton(
                 onPressed: _getFileInfo,
-                child: Text('Refresh', style: TextStyle(color: Colors.white38)),
+                child: Text('Refresh',
+                    style: TextStyle(color: Colors.white38)),
               ),
           ],
         ),
