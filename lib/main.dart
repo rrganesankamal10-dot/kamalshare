@@ -6,9 +6,17 @@ import 'package:network_info_plus/network_info_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:open_filex/open_filex.dart';
 import 'dart:io';
 import 'dart:convert';
-import 'dart:typed_data';
+
+final FlutterLocalNotificationsPlugin notifications =
+    FlutterLocalNotificationsPlugin();
+
+const String kRecentKey = 'recent_transfers';
 
 void main() {
   runApp(KamalShareApp());
@@ -24,6 +32,105 @@ class KamalShareApp extends StatelessWidget {
       home: SplashScreen(),
     );
   }
+}
+
+// ─── Notification helper ───────────────────────────
+Future<void> initNotifications() async {
+  const androidSettings =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+  const settings = InitializationSettings(android: androidSettings);
+  await notifications.initialize(settings);
+}
+
+Future<void> showDownloadNotification(String fileName, String path) async {
+  const androidDetails = AndroidNotificationDetails(
+    'kamalshare_downloads',
+    'KamalShare Downloads',
+    channelDescription: 'Notifies when a file is received via KamalShare',
+    importance: Importance.high,
+    priority: Priority.high,
+    icon: '@mipmap/ic_launcher',
+  );
+  const details = NotificationDetails(android: androidDetails);
+  await notifications.show(
+    fileName.hashCode,
+    'Download complete',
+    fileName,
+    details,
+    payload: path,
+  );
+}
+
+// ─── Recent transfers storage ──────────────────────
+class RecentFile {
+  final String name;
+  final String path;
+  final int size;
+  final String direction; // 'sent' or 'received'
+  final DateTime time;
+
+  RecentFile({
+    required this.name,
+    required this.path,
+    required this.size,
+    required this.direction,
+    required this.time,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'path': path,
+        'size': size,
+        'direction': direction,
+        'time': time.toIso8601String(),
+      };
+
+  factory RecentFile.fromJson(Map<String, dynamic> json) => RecentFile(
+        name: json['name'],
+        path: json['path'],
+        size: json['size'],
+        direction: json['direction'],
+        time: DateTime.parse(json['time']),
+      );
+}
+
+Future<List<RecentFile>> loadRecentFiles() async {
+  final prefs = await SharedPreferences.getInstance();
+  final raw = prefs.getStringList(kRecentKey) ?? [];
+  final list = raw
+      .map((s) => RecentFile.fromJson(jsonDecode(s)))
+      .toList();
+  list.sort((a, b) => b.time.compareTo(a.time));
+  return list;
+}
+
+Future<void> addRecentFile(RecentFile file) async {
+  final prefs = await SharedPreferences.getInstance();
+  final raw = prefs.getStringList(kRecentKey) ?? [];
+  raw.insert(0, jsonEncode(file.toJson()));
+  if (raw.length > 30) raw.removeRange(30, raw.length);
+  await prefs.setStringList(kRecentKey, raw);
+}
+
+String formatSize(int bytes) {
+  if (bytes < 1024) return '$bytes B';
+  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+  if (bytes < 1024 * 1024 * 1024) {
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+  return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+}
+
+String fileIcon(String name) {
+  final ext = name.split('.').last.toLowerCase();
+  const map = {
+    'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️', 'webp': '🖼️',
+    'mp4': '🎬', 'mkv': '🎬', 'mov': '🎬', 'avi': '🎬',
+    'mp3': '🎵', 'wav': '🎵', 'm4a': '🎵',
+    'pdf': '📄', 'doc': '📝', 'docx': '📝', 'txt': '📝',
+    'zip': '📦', 'rar': '📦', 'apk': '📱',
+  };
+  return map[ext] ?? '📁';
 }
 
 // ─── Splash Screen ────────────────────────────────
@@ -44,10 +151,19 @@ class _SplashScreenState extends State<SplashScreen>
         vsync: this, duration: Duration(milliseconds: 1200));
     _fade = Tween<double>(begin: 0, end: 1).animate(_ctrl);
     _ctrl.forward();
-    Future.delayed(Duration(milliseconds: 2500), () {
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (_) => HomeScreen()));
-    });
+    _setup();
+  }
+
+  Future<void> _setup() async {
+    await initNotifications();
+    await Permission.notification.request();
+    if (Platform.isAndroid) {
+      await Permission.manageExternalStorage.request();
+      await Permission.storage.request();
+    }
+    await Future.delayed(Duration(milliseconds: 2000));
+    Navigator.pushReplacement(
+        context, MaterialPageRoute(builder: (_) => HomeScreen()));
   }
 
   @override
@@ -117,18 +233,38 @@ class _SplashScreenState extends State<SplashScreen>
 }
 
 // ─── Home Screen ──────────────────────────────────
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  List<RecentFile> _recent = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final list = await loadRecentFiles();
+    setState(() => _recent = list);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFF0D0D0D),
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: RefreshIndicator(
+          color: Color(0xFFE8FF47),
+          backgroundColor: Color(0xFF161616),
+          onRefresh: _refresh,
+          child: ListView(
+            padding: EdgeInsets.all(24),
             children: [
-              SizedBox(height: 20),
+              SizedBox(height: 10),
               Row(
                 children: [
                   Text('Kamal',
@@ -150,7 +286,7 @@ class HomeScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: Colors.white12),
                     ),
-                    child: Text('v2.1',
+                    child: Text('v3.0',
                         style: TextStyle(
                             color: Colors.white38, fontSize: 12)),
                   ),
@@ -160,7 +296,7 @@ class HomeScreen extends StatelessWidget {
               Text('No internet · No laptop · Just phones',
                   style:
                       TextStyle(color: Colors.white38, fontSize: 13)),
-              SizedBox(height: 48),
+              SizedBox(height: 40),
 
               _bigButton(
                 context: context,
@@ -170,8 +306,11 @@ class HomeScreen extends StatelessWidget {
                 sublabel: 'Turn on hotspot and share',
                 color: Color(0xFFE8FF47),
                 textColor: Colors.black,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => SenderScreen())),
+                onTap: () async {
+                  await Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => SenderScreen()));
+                  _refresh();
+                },
               ),
               SizedBox(height: 16),
 
@@ -184,40 +323,55 @@ class HomeScreen extends StatelessWidget {
                 color: Color(0xFF161616),
                 textColor: Colors.white,
                 borderColor: Colors.white12,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(
-                        builder: (_) => ReceiverScreen())),
+                onTap: () async {
+                  await Navigator.push(context,
+                      MaterialPageRoute(
+                          builder: (_) => ReceiverScreen()));
+                  _refresh();
+                },
               ),
 
-              Spacer(),
+              SizedBox(height: 32),
 
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Color(0xFF161616),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('How it works',
+              // Recent transfers
+              Row(
+                children: [
+                  Text('Recent transfers',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600)),
+                  Spacer(),
+                  if (_recent.isNotEmpty)
+                    Text('${_recent.length}',
                         style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600)),
-                    SizedBox(height: 10),
-                    _howRow('1',
-                        'Sender taps Send File and turns on hotspot'),
-                    _howRow('2',
-                        'Receiver connects phone to sender hotspot'),
-                    _howRow(
-                        '3', 'Receiver taps Receive and scans QR code'),
-                    _howRow('4', 'File saves straight to Downloads!'),
-                  ],
-                ),
+                            color: Colors.white38, fontSize: 12)),
+                ],
               ),
-              SizedBox(height: 20),
+              SizedBox(height: 12),
+
+              if (_recent.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Color(0xFF161616),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'No files shared yet\nSend or receive a file to see it here',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: Colors.white38, fontSize: 12, height: 1.6),
+                    ),
+                  ),
+                )
+              else
+                ..._recent.map((f) => _recentTile(f)).toList(),
+
+              SizedBox(height: 24),
               Center(
                 child: Text(
                   'KAMALSHARE  ◆  ECE PROJECT  ◆  BUILT BY KAMAL',
@@ -235,33 +389,54 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _howRow(String num, String text) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 20, height: 20,
-            decoration: BoxDecoration(
-              color: Color(0xFFE8FF47).withOpacity(0.15),
-              borderRadius: BorderRadius.circular(6),
+  Widget _recentTile(RecentFile f) {
+    return GestureDetector(
+      onTap: () {
+        if (f.direction == 'received') {
+          OpenFilex.open(f.path);
+        }
+      },
+      child: Container(
+        margin: EdgeInsets.only(bottom: 8),
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Color(0xFF161616),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: Row(
+          children: [
+            Text(fileIcon(f.name), style: TextStyle(fontSize: 22)),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(f.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500)),
+                  SizedBox(height: 2),
+                  Text('${formatSize(f.size)} · ${f.direction}',
+                      style: TextStyle(
+                          color: Colors.white38, fontSize: 11)),
+                ],
+              ),
             ),
-            child: Center(
-              child: Text(num,
-                  style: TextStyle(
-                      color: Color(0xFFE8FF47),
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold)),
+            Icon(
+              f.direction == 'sent'
+                  ? Icons.north_east_rounded
+                  : Icons.south_west_rounded,
+              color: f.direction == 'sent'
+                  ? Color(0xFFE8FF47)
+                  : Color(0xFF47FFB2),
+              size: 18,
             ),
-          ),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(text,
-                style: TextStyle(
-                    color: Colors.white54, fontSize: 12)),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -326,6 +501,9 @@ class HomeScreen extends StatelessWidget {
 }
 
 // ─── Sender Screen ────────────────────────────────
+// Streams the file from disk in chunks instead of loading it
+// fully into memory — this is what lets large videos (500MB-1GB+)
+// transfer without crashing the app.
 class SenderScreen extends StatefulWidget {
   @override
   _SenderScreenState createState() => _SenderScreenState();
@@ -333,10 +511,11 @@ class SenderScreen extends StatefulWidget {
 
 class _SenderScreenState extends State<SenderScreen> {
   String _ip = '192.168.43.1';
-  int _port = 8080;
+  final int _port = 8080;
   HttpServer? _server;
   String? _selectedFileName;
-  Uint8List? _selectedFileBytes;
+  String? _selectedFilePath;
+  int _selectedFileSize = 0;
   bool _loading = true;
   bool _fileSelected = false;
   int _downloadCount = 0;
@@ -360,18 +539,25 @@ class _SenderScreenState extends State<SenderScreen> {
 
       final router = shelf_router.Router();
 
+      // Streams the file in chunks straight from disk —
+      // works for files of any size, including 1GB+ videos.
       router.get('/file', (shelf.Request request) async {
-        if (_selectedFileBytes == null || _selectedFileName == null) {
+        if (_selectedFilePath == null) {
           return shelf.Response.notFound('No file selected');
         }
+        final file = File(_selectedFilePath!);
+        if (!await file.exists()) {
+          return shelf.Response.notFound('File missing');
+        }
+        final length = await file.length();
         setState(() => _downloadCount++);
         return shelf.Response.ok(
-          _selectedFileBytes!,
+          file.openRead(),
           headers: {
             'Content-Type': 'application/octet-stream',
             'Content-Disposition':
                 'attachment; filename="$_selectedFileName"',
-            'Content-Length': '${_selectedFileBytes!.length}',
+            'Content-Length': '$length',
           },
         );
       });
@@ -380,8 +566,8 @@ class _SenderScreenState extends State<SenderScreen> {
         return shelf.Response.ok(
           jsonEncode({
             'filename': _selectedFileName ?? 'No file',
-            'size': _selectedFileBytes?.length ?? 0,
-            'ready': _selectedFileBytes != null,
+            'size': _selectedFileSize,
+            'ready': _selectedFilePath != null,
           }),
           headers: {'Content-Type': 'application/json'},
         );
@@ -405,7 +591,7 @@ class _SenderScreenState extends State<SenderScreen> {
 
   String _buildHtml() {
     final fname = _selectedFileName ?? 'No file selected';
-    final ready = _selectedFileBytes != null;
+    final ready = _selectedFilePath != null;
     return '''<!DOCTYPE html>
 <html>
 <head>
@@ -429,7 +615,7 @@ body{background:#0D0D0D;color:#F0F0F0;font-family:sans-serif;min-height:100vh;di
 <div class="card">
   <div class="logo">Kamal<span>Share</span></div>
   <div class="sub">Wireless File Transfer by Kamal</div>
-  <div class="file-name">${ready ? '📁 $fname' : '⏳ Waiting for file selection...'}</div>
+  <div class="file-name">${ready ? '📁 $fname (${formatSize(_selectedFileSize)})' : '⏳ Waiting for file selection...'}</div>
   ${ready ? '<a class="btn" href="/file">⬇ Download $fname</a>' : '<div class="btn not-ready">No file selected yet</div>'}
   <div class="footer">KAMALSHARE · ECE PROJECT · BUILT BY KAMAL</div>
 </div>
@@ -438,15 +624,29 @@ body{background:#0D0D0D;color:#F0F0F0;font-family:sans-serif;min-height:100vh;di
   }
 
   Future<void> _pickFile() async {
-    final result = await FilePicker.platform.pickFiles(withData: true);
-    if (result != null && result.files.single.bytes != null) {
+    final result = await FilePicker.platform.pickFiles();
+    if (result != null && result.files.single.path != null) {
+      final path = result.files.single.path!;
+      final size = await File(path).length();
       setState(() {
         _selectedFileName = result.files.single.name;
-        _selectedFileBytes = result.files.single.bytes;
+        _selectedFilePath = path;
+        _selectedFileSize = size;
         _fileSelected = true;
         _downloadCount = 0;
       });
     }
+  }
+
+  Future<void> _onSentOnce() async {
+    if (_selectedFileName == null || _selectedFilePath == null) return;
+    await addRecentFile(RecentFile(
+      name: _selectedFileName!,
+      path: _selectedFilePath!,
+      size: _selectedFileSize,
+      direction: 'sent',
+      time: DateTime.now(),
+    ));
   }
 
   @override
@@ -514,7 +714,7 @@ body{background:#0D0D0D;color:#F0F0F0;font-family:sans-serif;min-height:100vh;di
                       border: Border.all(color: Colors.white12),
                     ),
                     child: Text(
-                      '1. Turn ON your mobile hotspot\n2. Tell receiver to connect to your hotspot\n3. Select file below\n4. Show QR code to receiver to scan',
+                      '1. Turn ON your mobile hotspot\n2. Tell receiver to connect to your hotspot\n3. Select any file — photo, video, doc, even 1GB+\n4. Show QR code to receiver to scan',
                       style: TextStyle(
                           color: Colors.white54,
                           fontSize: 12,
@@ -558,7 +758,7 @@ body{background:#0D0D0D;color:#F0F0F0;font-family:sans-serif;min-height:100vh;di
                                 Text(
                                   _fileSelected
                                       ? _selectedFileName!
-                                      : 'Tap to select file',
+                                      : 'Tap to select any file (photo, video, doc)',
                                   style: TextStyle(
                                       color: _fileSelected
                                           ? Colors.white
@@ -569,7 +769,7 @@ body{background:#0D0D0D;color:#F0F0F0;font-family:sans-serif;min-height:100vh;di
                                 ),
                                 if (_fileSelected)
                                   Text(
-                                    '${(_selectedFileBytes!.length / 1024).toStringAsFixed(1)} KB',
+                                    formatSize(_selectedFileSize),
                                     style: TextStyle(
                                         color: Colors.white38,
                                         fontSize: 12),
@@ -642,6 +842,12 @@ body{background:#0D0D0D;color:#F0F0F0;font-family:sans-serif;min-height:100vh;di
                                 color: Color(0xFF47FFB2),
                                 fontSize: 13),
                           ),
+                          if (_downloadCount == 1) ...[
+                            Builder(builder: (_) {
+                              _onSentOnce();
+                              return SizedBox.shrink();
+                            }),
+                          ],
                         ],
                       ],
                     ),
@@ -749,6 +955,8 @@ class _ReceiverScreenState extends State<ReceiverScreen> {
 }
 
 // ─── Download Screen ──────────────────────────────
+// Streams the response to disk in chunks instead of buffering
+// the whole file in RAM — required so 1GB+ videos don't crash.
 class DownloadScreen extends StatefulWidget {
   final String url;
   const DownloadScreen({required this.url});
@@ -760,6 +968,7 @@ class DownloadScreen extends StatefulWidget {
 class _DownloadScreenState extends State<DownloadScreen> {
   String _status = 'Connecting...';
   String? _fileName;
+  int _totalSize = 0;
   bool _downloading = false;
   bool _done = false;
   double _progress = 0;
@@ -781,6 +990,7 @@ class _DownloadScreenState extends State<DownloadScreen> {
       final data = jsonDecode(body);
       setState(() {
         _fileName = data['filename'];
+        _totalSize = data['size'] ?? 0;
         _status = data['ready']
             ? 'Ready! Tap download below'
             : 'Sender has not selected a file yet';
@@ -791,9 +1001,6 @@ class _DownloadScreenState extends State<DownloadScreen> {
     }
   }
 
-  // Saves directly to the phone's public Downloads folder
-  // so it shows up in the Files app and Recent files,
-  // instead of hiding inside the app's private storage.
   Future<void> _downloadFile() async {
     setState(() {
       _downloading = true;
@@ -805,24 +1012,35 @@ class _DownloadScreenState extends State<DownloadScreen> {
       final req =
           await client.getUrl(Uri.parse('${widget.url}/file'));
       final res = await req.close();
-      final total = res.contentLength;
-      int received = 0;
-      final bytes = <int>[];
-      await for (final chunk in res) {
-        bytes.addAll(chunk);
-        received += chunk.length;
-        if (total > 0) {
-          setState(() => _progress = received / total);
-        }
-      }
+      final total = res.contentLength > 0 ? res.contentLength : _totalSize;
 
-      // Public Downloads folder — visible in Files app on every Android phone
       final downloadDir = Directory('/storage/emulated/0/Download');
       if (!await downloadDir.exists()) {
         await downloadDir.create(recursive: true);
       }
       final file = File('${downloadDir.path}/$_fileName');
-      await file.writeAsBytes(bytes);
+      final sink = file.openWrite();
+
+      int received = 0;
+      await for (final chunk in res) {
+        sink.add(chunk);
+        received += chunk.length;
+        if (total > 0) {
+          setState(() => _progress = received / total);
+        }
+      }
+      await sink.flush();
+      await sink.close();
+
+      await addRecentFile(RecentFile(
+        name: _fileName!,
+        path: file.path,
+        size: received,
+        direction: 'received',
+        time: DateTime.now(),
+      ));
+
+      await showDownloadNotification(_fileName!, file.path);
 
       setState(() {
         _done = true;
@@ -887,6 +1105,12 @@ class _DownloadScreenState extends State<DownloadScreen> {
                       fontSize: 16,
                       fontWeight: FontWeight.w600),
                   textAlign: TextAlign.center),
+            if (_totalSize > 0) ...[
+              SizedBox(height: 4),
+              Text(formatSize(_totalSize),
+                  style: TextStyle(
+                      color: Colors.white38, fontSize: 12)),
+            ],
             SizedBox(height: 12),
             Text(_status,
                 style: TextStyle(
@@ -947,7 +1171,27 @@ class _DownloadScreenState extends State<DownloadScreen> {
                   ),
                 ),
               ),
-            if (_done)
+            if (_done) ...[
+              GestureDetector(
+                onTap: () => OpenFilex.open(_savedPath),
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(18),
+                  margin: EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Color(0xFF161616),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Color(0xFF47FFB2)),
+                  ),
+                  child: Center(
+                    child: Text('Open File',
+                        style: TextStyle(
+                            color: Color(0xFF47FFB2),
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ),
               GestureDetector(
                 onTap: () => Navigator.popUntil(
                     context, (route) => route.isFirst),
@@ -967,6 +1211,7 @@ class _DownloadScreenState extends State<DownloadScreen> {
                   ),
                 ),
               ),
+            ],
             SizedBox(height: 16),
             if (!_done)
               TextButton(
